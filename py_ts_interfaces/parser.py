@@ -1,6 +1,6 @@
 import warnings
 from collections import deque
-from typing import Dict, List, NamedTuple, Optional, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import astroid
 
@@ -36,7 +36,8 @@ SUBSCRIPT_FORMAT_MAP: Dict[str, str] = {
 
 
 InterfaceAttributes = Dict[str, str]
-PreparedInterfaces = Dict[str, InterfaceAttributes]
+BaseList = List[str]
+PreparedInterfaces = Dict[str, Tuple[InterfaceAttributes, BaseList]]
 
 
 class Parser:
@@ -77,8 +78,15 @@ class Parser:
     def flush(self) -> str:
         serialized: List[str] = []
 
-        for interface, attributes in self.prepared.items():
-            s = f"interface {interface} {{\n"
+        for interface, data in self.prepared.items():
+            attributes, bases = data
+
+            if len(bases) > 0:
+                bases_str = " extends " + ", ".join(bases)
+            else:
+                bases_str = ""
+
+            s = f"interface {interface}{bases_str} {{\n"
             for attribute_name, attribute_type in attributes.items():
                 s += f"    {attribute_name}: {attribute_type};\n"
             s += "}"
@@ -88,14 +96,24 @@ class Parser:
         return "\n\n".join(serialized).strip() + "\n"
 
 
-def get_types_from_classdef(node: astroid.ClassDef) -> Dict[str, str]:
+def get_types_from_classdef(
+    node: astroid.ClassDef,
+) -> Tuple[InterfaceAttributes, BaseList]:
     serialized_types: Dict[str, str] = {}
+    bases: BaseList = []
+
+    # Put in bases the names of the interfaces that this interface inherits from
+    for base in node.bases:
+        if isinstance(base, astroid.Name) and base.name is not None:
+            bases.append(base.name)
+
     for child in node.body:
         if not isinstance(child, astroid.AnnAssign):
             continue
         child_name, child_type = parse_annassign_node(child)
         serialized_types[child_name] = child_type
-    return serialized_types
+
+    return serialized_types, bases
 
 
 class ParsedAnnAssign(NamedTuple):

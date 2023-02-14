@@ -104,7 +104,11 @@ def get_types_from_classdef(
 
     # Put in bases the names of the interfaces that this interface inherits from
     for base in node.bases:
-        if isinstance(base, astroid.Name) and base.name is not None:
+        if (
+            isinstance(base, astroid.Name)
+            and base.name is not None
+            and base.name != "Interface"
+        ):
             bases.append(base.name)
 
     for child in node.body:
@@ -213,7 +217,9 @@ def has_dataclass_decorator(decorators: Optional[astroid.Decorators]) -> bool:
 def ensure_possible_interface_references_valid(interfaces: PreparedInterfaces) -> None:
     interface_names = set(interfaces.keys())
 
-    for interface, attributes in interfaces.items():
+    for interface, data in interfaces.items():
+        attributes = data[0]
+
         for attribute_name, attribute_type in attributes.items():
             if not isinstance(attribute_type, PossibleInterfaceReference):
                 continue

@@ -29,7 +29,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = '^3.7.2'
-astroid = "2.14.2"
+astroid = "^2.14.2"
 
 [tool.poetry.dev-dependencies]
 black = '22.6.0'
